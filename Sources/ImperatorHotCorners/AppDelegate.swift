@@ -57,7 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func togglePanel() {
         // Not `panel.isShown`: the press itself can close the panel, and the
         // click would then reopen it instead of closing it.
-        if panel.statusClickShouldClose(for: NSApp.currentEvent) { closePanel() } else { showPanel() }
+        if panel.statusClickShouldClose() { closePanel() } else { showPanel() }
     }
 
     private func showPanel() {

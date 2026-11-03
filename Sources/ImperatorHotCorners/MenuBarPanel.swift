@@ -15,15 +15,11 @@ final class MenuBarPanel: NSPanel {
     private var clickMonitor: Any?
     private var appClickMonitor: Any?
     private var keyMonitor: Any?
-    /// True when the panel was closed by a click on the status item, so the
-    /// button's action knows it is a close and not an open.
+    /// The menu bar press monitor, registered for the panel's whole life.
+    private var statusPressMonitor: Any?
+    /// Whether the panel was up when the current click on the status item
+    /// started, so the button's action knows it is a close and not an open.
     private var panelWasOpenAtStatusPress = false
-    /// When the panel last closed, so a click that arrives right after a close
-    /// it did not get to see is still read as that close.
-    private var lastCloseTime: TimeInterval = 0
-    /// A close and the click that caused it are one press and its button action,
-    /// which arrive milliseconds apart.
-    private static let toggleWindow: TimeInterval = 0.4
     private weak var anchor: NSStatusBarButton?
     private var resignObserver: NSObjectProtocol?
 
@@ -84,7 +80,18 @@ final class MenuBarPanel: NSPanel {
         contentView = container
 
         // Registered once, for the panel's whole life, and never beside the
-        // monitors below: those are removed by `close()`, and a press that closes
+        // monitors below: those are removed by `close()`, and a press that takes
+        // the panel down has to be seen before it does. Set at every menu bar
+        // press, so a record left by an earlier click cannot outlive the click
+        // that follows it: a record that did made the panel take two clicks to
+        // open.
+        statusPressMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] event in
+            guard let self, Self.isMenuBarPress(event) else { return event }
+            self.panelWasOpenAtStatusPress = self.isVisible
+            return event
+        }
     }
 
     var isShown: Bool { isVisible }
@@ -126,15 +133,15 @@ final class MenuBarPanel: NSPanel {
     /// An override, so every `close()` in the app lands here and the monitors
     /// go with the panel.
     override func close() {
-        // A click on the status item is the toggle, and it can close the panel
-        // through an outside click monitor or a resign before the button's action
-        // arrives. Recorded here, where every close passes and the click is still
-        // the current event, so the action closes instead of reopening what the
-        // click just closed. Decided from the menu bar strip rather than the
-        // item's own rect: a status item's button can be rebuilt by AppKit, and a
-        // rect read from a stale one would never match.
+        // A click on the status item can close the panel before the button's
+        // action arrives. That is recorded at the press itself, by the monitor in
+        // init. Only a press is recorded here, never the mouse up the action
+        // arrives on: re-arming there left the record set after the click that
+        // closed the panel, so the next click read as a close and did nothing.
+        // Decided from the menu bar strip rather than the item's own rect: a
+        // status item's button can be rebuilt by AppKit, and a rect read from a
+        // stale one would never match.
         if isMenuBarPress(NSApp.currentEvent) { panelWasOpenAtStatusPress = true }
-        lastCloseTime = ProcessInfo.processInfo.systemUptime
         stopMonitoring()
         super.close()
         onClose?()
@@ -146,16 +153,9 @@ final class MenuBarPanel: NSPanel {
     /// closed itself since: a press can close the panel before the button's
     /// action arrives, through the outside click monitors or a resign, and an
     /// action that read `isShown` alone would reopen what the press just closed.
-    func statusClickShouldClose(for event: NSEvent?) -> Bool {
-        // A close that carried no event of its own, such as one from a resign,
-        // can only be tied to this click by time and by where the click landed.
-        let closedJustNow = ProcessInfo.processInfo.systemUptime - lastCloseTime < Self.toggleWindow
+    func statusClickShouldClose() -> Bool {
         let shouldClose = isVisible || panelWasOpenAtStatusPress
-            || (closedJustNow && Self.isMenuBarPress(event))
         panelWasOpenAtStatusPress = false
-        // One click, one answer: a second action on the same click must not be
-        // read from the close this one already explained.
-        lastCloseTime = 0
         return shouldClose
     }
 
@@ -225,11 +225,10 @@ final class MenuBarPanel: NSPanel {
         event.window?.convertPoint(toScreen: event.locationInWindow) ?? NSEvent.mouseLocation
     }
 
-    /// Down or up: the button's action arrives on the up, a close can see the down.
+    /// Down only: a press is the click's own event, the up is the button's action
+    /// arriving, and reading that as a press is what re-armed the record.
     private static func isMenuBarPress(_ event: NSEvent?) -> Bool {
-        guard let event,
-              event.type == .leftMouseDown || event.type == .rightMouseDown
-                || event.type == .leftMouseUp || event.type == .rightMouseUp else { return false }
+        guard let event, event.type == .leftMouseDown || event.type == .rightMouseDown else { return false }
         return isMenuBarPoint(screenPoint(of: event))
     }
 
@@ -241,6 +240,7 @@ final class MenuBarPanel: NSPanel {
 
     deinit {
         stopMonitoring()
+        if let statusPressMonitor { NSEvent.removeMonitor(statusPressMonitor) }
         if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
     }
 }

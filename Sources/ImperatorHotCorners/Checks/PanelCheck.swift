@@ -27,9 +27,15 @@ enum PanelCheck {
 
     /// A press in the menu bar, where the status item lives, the way a real
     /// click arrives: through the app, so the panel's own local monitors see it.
+    /// Where the status item sits: in the menu bar strip.
+    private static var menuBarPoint: NSPoint? {
+        guard let screen = NSScreen.main else { return nil }
+        return NSPoint(x: screen.frame.midX, y: screen.frame.maxY - 6)
+    }
+
     private static func pressMenuBar() {
-        guard let screen = NSScreen.main else { return }
-        press(at: NSPoint(x: screen.frame.midX, y: screen.frame.maxY - 6))
+        guard let point = menuBarPoint else { return }
+        press(at: point)
     }
 
     /// A press at a screen point, delivered through an ordinary window of the app.
@@ -46,40 +52,45 @@ enum PanelCheck {
         return window
     }
 
-    private static func press(at screenPoint: NSPoint) {
+    private static func mouseEvent(_ type: NSEvent.EventType, at screenPoint: NSPoint) -> NSEvent? {
         let window = window()
         let point = window.convertPoint(fromScreen: screenPoint)
-        let now = ProcessInfo.processInfo.systemUptime
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            guard let event = NSEvent.mouseEvent(
-                with: type, location: point, modifierFlags: [], timestamp: now,
-                windowNumber: window.windowNumber, context: nil, eventNumber: 0,
-                clickCount: 1, pressure: 1) else { continue }
-            // Taken through the queue, not sent: `NSApp.currentEvent` is set
-            // when the event comes off the queue, and the panel reads it to see
-            // that this close is a click on the status item.
-            NSApp.postEvent(event, atStart: false)
-            while let next = NSApp.nextEvent(matching: .any,
-                                            until: Date(timeIntervalSinceNow: 0.05),
-                                            inMode: .default, dequeue: true) {
-                NSApp.sendEvent(next)
-            }
+        return NSEvent.mouseEvent(
+            with: type, location: point, modifierFlags: [],
+            timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: window.windowNumber, context: nil, eventNumber: 0,
+            clickCount: 1, pressure: 1)
+    }
+
+    /// Taken through the queue, not sent: `NSApp.currentEvent` is set when the
+    /// event comes off the queue, and the panel reads it to see that a close is
+    /// a click on the status item.
+    private static func post(_ event: NSEvent) {
+        NSApp.postEvent(event, atStart: false)
+        while let next = NSApp.nextEvent(matching: .any,
+                                        until: Date(timeIntervalSinceNow: 0.05),
+                                        inMode: .default, dequeue: true) {
+            NSApp.sendEvent(next)
         }
     }
 
-    /// The mouse up the status item's action arrives with.
-    private static func actionEvent() -> NSEvent? {
-        guard let screen = NSScreen.main else { return nil }
-        return mouseUp(at: NSPoint(x: screen.frame.midX, y: screen.frame.maxY - 6))
+    private static func press(at screenPoint: NSPoint) {
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            guard let event = mouseEvent(type, at: screenPoint) else { continue }
+            post(event)
+        }
     }
 
-    private static func mouseUp(at screenPoint: NSPoint) -> NSEvent? {
-        let window = window()
-        let point = window.convertPoint(fromScreen: screenPoint)
-        return NSEvent.mouseEvent(with: .leftMouseUp, location: point, modifierFlags: [],
-                                  timestamp: ProcessInfo.processInfo.systemUptime,
-                                  windowNumber: window.windowNumber, context: nil,
-                                  eventNumber: 0, clickCount: 1, pressure: 1)
+    /// Closes the panel the way the status item's action does: while a menu bar
+    /// mouse up is the current event.
+    private static func closeOnMenuBarUp(_ panel: MenuBarPanel) {
+        guard let point = menuBarPoint, let up = mouseEvent(.leftMouseUp, at: point) else { return }
+        let closer = NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { [weak panel] _ in
+            panel?.close()
+            return nil
+        }
+        post(up)
+        if let closer { NSEvent.removeMonitor(closer) }
     }
 
     private static func escape(_ panel: NSPanel) {
@@ -160,12 +171,11 @@ enum PanelCheck {
         // Whether the press leaves the panel up or takes it down (a resign can),
         // the click has to be read as the toggle. Reading it as an open is the
         // bug this covers.
-        expect(panel.statusClickShouldClose(for: actionEvent()),
+        expect(panel.statusClickShouldClose(),
                "a press on the status item is not read as the toggle, so the click reopens it")
 
         // And if some closer does take the panel down during that press, the
-        // action has to read it as a close. The record is made inside close(),
-        // so it cannot depend on which local monitor AppKit calls first.
+        // action has to read it as a close.
         let closer = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak panel] _ in
             panel?.close()
             return nil
@@ -174,32 +184,29 @@ enum PanelCheck {
         pressMenuBar()
         if let closer { NSEvent.removeMonitor(closer) }
         expect(!panel.isVisible, "the closer did not take the panel down")
-        expect(panel.statusClickShouldClose(for: actionEvent()),
+        expect(panel.statusClickShouldClose(),
                "a close during the status click is read as an open, so the click reopens it")
-        expect(!panel.statusClickShouldClose(for: actionEvent()), "the press state was not consumed")
+        expect(!panel.statusClickShouldClose(), "the press state was not consumed")
 
-        // A close with no event of its own, as a resign gives, followed by the
-        // button's action on the menu bar: still the same click.
+        // The click that closes the panel is a press and then the button's action
+        // on the mouse up. The action's own close must not leave the record set:
+        // a record left behind is the next click read as a close, which is the
+        // "click twice to open" bug.
         panel.show(from: button)
-        panel.close()
-        expect(panel.statusClickShouldClose(for: actionEvent()),
-               "a close just before the click reopens the panel")
-        expect(!panel.statusClickShouldClose(for: actionEvent()), "the close state was not consumed")
-        expect(!panel.statusClickShouldClose(for: mouseUp(at: NSPoint(x: 200, y: 200))),
-               "a click below the menu bar read as the toggle")
+        pressMenuBar()
+        expect(panel.statusClickShouldClose(), "an open panel is not read as a close")
+        closeOnMenuBarUp(panel)
+        expect(!panel.isVisible, "the action's close did not take the panel down")
+        pressMenuBar()
+        expect(!panel.statusClickShouldClose(),
+               "the click after a close is read as another close, so it takes two clicks to open")
 
-        // A click below the menu bar is still a click outside, and closes.
+        // A click below the menu bar is still a click outside, and closes, and is
+        // not the toggle.
         panel.show(from: button)
         press(at: NSPoint(x: 200, y: 200))
         expect(!panel.isVisible, "a click outside the panel did not close it")
-        expect(!panel.statusClickShouldClose(for: mouseUp(at: NSPoint(x: 200, y: 200))),
-               "an outside click reads as the toggle")
-
-        panel.show(from: button)
-        panel.close()
-        Thread.sleep(forTimeInterval: 0.5)
-        expect(!panel.statusClickShouldClose(for: actionEvent()),
-               "a later click with the panel down does not read as a close")
+        expect(!panel.statusClickShouldClose(), "an outside click reads as the toggle")
 
         if failures.isEmpty {
             print("PANEL_CHECK_OK")
