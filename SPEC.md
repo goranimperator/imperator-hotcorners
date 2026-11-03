@@ -15,7 +15,7 @@ Hot corners live three levels deep in System Settings (Desktop & Dock, then the 
 - R3. Reads the current hot corners from the system. Corners already set in System Settings show up in the app.
 - R4. Writes changes back, so they take effect at once and System Settings shows the same values.
 - R5. Same UI as Settings: native pop-up buttons, the same titles, the same order.
-- R6. A switch in the header like Imperator EQ's. Off disables every corner, which is the same as choosing "-" for all four.
+- R6. A switch under the four corner selects, on a row of its own, labelled **Disable HotCorners**. On disables every corner, which is the same as choosing "-" for all four; off leaves them alone.
 - R7. Icon like Imperator WidgetClock's menu bar glyph, with a dot or a short stroke in each corner.
 
 ## Non-goals
@@ -86,8 +86,9 @@ The Dock is the source of truth. The app keeps one thing of its own: the **snaps
 - Brandbook menu bar app: `MenuBarPanel` (section 6.1), no `NSPopover`, dark forced, red accent forced, `LSUIElement`.
 - **Width 400 pt instead of the standard 340.** Two columns of pop-ups side by side need 176 pt each for the longest title (F11). At 340 a column is 150 pt and four titles would be cut. Brandbook 5.1 allows an exception when content demands it, as RetroPong's does. Every plain title fits the 178 pt column. A title with modifier keys can be up to 228 pt ("⌃⌥⇧⌘ Disable Screen Saver"), so the longer ones truncate with an ellipsis and the tooltip shows them whole; making the panel 500 pt wide for a rare case was not worth it.
 - The closed pop-up shows the store's value through the cell's own item (`NSPopUpButtonCell.usesItemFromMenu = false`), so the menu itself stays exactly Settings' menu, alternates included, for every value.
-- Header (brandbook 9.1, EQ layout): the app glyph at 16 pt, template, then "Imperator HotCorners" in `.headline`, a spacer, and the brand switch anchored trailing. On means corners are active.
+- Header (brandbook 9.1, EQ layout): the app glyph at 16 pt, template, then "Imperator HotCorners" in `.headline`. The header holds no controls.
 - Content: a 2 by 2 grid, 12 pt between columns, 8 pt between rows, 16 pt padding. Top left pop-up at top left, and so on, so position says which corner it is. Each pop-up carries the Settings accessibility name and the full title as tooltip.
+- Disable row: on its own row under the grid, 12 pt below it, a 6 pt spaced label and the brand switch: "Disable HotCorners" then the switch. The switch acts on all four corners, so it sits with them and names its action, rather than sitting in the header as EQ's does. On means every corner is "-"; the store's own `isEnabled` flag runs the other way and the view inverts it.
 - Footer (brandbook 9.2, EQ layout): Open at Login switch, spacer, About, Quit.
 - Notices (EQ's notice pattern, `.primary` and `.secondary` text, never red text):
   - API missing: "Hot corners can’t be changed here" / "This version of macOS doesn’t let other apps change hot corners. You can still set them in System Settings." / button "Open Desktop & Dock Settings".

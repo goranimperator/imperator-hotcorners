@@ -9,6 +9,9 @@ if arguments.contains("--dock-check") {
 if arguments.contains("--icon-check") {
     exit(MainActor.assumeIsolated { IconCheck.run() })
 }
+if arguments.contains("--panel-check") {
+    exit(MainActor.assumeIsolated { PanelCheck.run() })
+}
 if arguments.contains("--about-check") {
     exit(MainActor.assumeIsolated { AboutCheck.run() })
 }

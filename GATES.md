@@ -2,7 +2,7 @@
 
 OWNS: Package.swift, Makefile, .gitignore, LICENSE, README.md, CLAUDE.md, SPEC.md, PLAN.md, GATES.md, ANTISLOP-GATE.md, Resources/**, Sources/**, Tests/**, scripts/**
 
-Scope: a signed, universal menu bar app that reads the four hot corners from the Dock, writes them the way System Settings does, and turns them all off and back on from an EQ-style header switch, built to the Imperator brandbook (SPEC.md, PLAN.md).
+Scope: a signed, universal menu bar app that reads the four hot corners from the Dock, writes them the way System Settings does, and turns them all off and back on from a Disable HotCorners switch under the four pop-ups, built to the Imperator brandbook (SPEC.md, PLAN.md).
 
 Runnable gates run from the repo root with /bin/sh. Tools needed: Xcode 27 command line tools (swift, otool, lipo, codesign, plutil, strings), node, and the Imperator Dev signing identity in the login keychain. G5 to G8 run the built binary; G5 reads the live Dock and writes nothing.
 
@@ -61,6 +61,11 @@ Runnable gates run from the repo root with /bin/sh. Tools needed: Xcode 27 comma
   EXPECT: G11_NO_DEBUG_OK
   EVIDENCE: exit=0; shell=/bin/sh; cwd=<repo root>; path=58838ac404b6/37 entries; output=G11_NO_DEBUG_OK
 
+- [ ] G13: the panel opens at the pop-up menu level, a click on the switch lands and turns the corners off and on, a click inside keeps it open, Escape closes it, it reopens, it grows for a notice, and a press on the status item that closed the panel does not reopen it
+  CHECK: "build/Imperator Hot Corners.app/Contents/MacOS/ImperatorHotCorners" --panel-check
+  EXPECT: PANEL_CHECK_OK
+  EVIDENCE: pending
+
 - [x] G12: the bundle carries the real app icon
   CHECK: test -f Resources/AppIcon.png && test -f "build/Imperator HotCorners.app/Contents/Resources/AppIcon.icns" && echo G12_ICON_OK
   EXPECT: G12_ICON_OK
@@ -75,7 +80,7 @@ Runnable gates run from the repo root with /bin/sh. Tools needed: Xcode 27 comma
 - [ ] M3: the app's pop-up menu matches the Settings pop-up: same titles, same order, same separators (compare build/preview/menu.txt), and holding command shows the same modifier titles in both
   EVIDENCE: pending
 
-- [ ] M4: visual review against the brandbook: glyph 16 pt and name in the header, switch at the trailing edge, footer order, 18.25 pt circular corners, no animation, grid dimmed when off, notices readable, no blue anywhere including the open pop-up menu's highlight
+- [ ] M4: visual review against the brandbook: glyph 16 pt and name in the header, the Disable HotCorners label and switch on their own row under the grid (on means all four are off), footer order, 18.25 pt circular corners, no animation, grid dimmed when off, notices readable, no blue anywhere including the open pop-up menu's highlight
   EVIDENCE: pending
 
 - [ ] M5: Goran picked the corner mark (dot or stroke) from build/preview/glyph-*.png and the other variant is deleted

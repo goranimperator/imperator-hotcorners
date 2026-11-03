@@ -55,7 +55,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func togglePanel() {
-        if panel.isShown { closePanel() } else { showPanel() }
+        // Not `panel.isShown`: the press itself can close the panel, and the
+        // click would then reopen it instead of closing it.
+        if panel.statusClickShouldClose(for: NSApp.currentEvent) { closePanel() } else { showPanel() }
     }
 
     private func showPanel() {
@@ -65,8 +67,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.show(from: button)
         NSApp.activate(ignoringOtherApps: true)
         // Pressed while the panel is open, like the system's own menu bar items.
-        // After the click's own tracking, which would otherwise clear it.
-        DispatchQueue.main.async { button.highlight(true) }
+        // After the click's own tracking, which would otherwise clear it. The
+        // panel can already be closed again by then, and a highlight set after
+        // that would stay on with nothing open.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.panel.isShown else { return }
+            button.highlight(true)
+        }
     }
 
     private func closePanel() {

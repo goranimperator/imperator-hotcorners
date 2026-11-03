@@ -2,7 +2,7 @@ import AppKit
 import HotCornersCore
 import SwiftUI
 
-/// Header, corner grid, footer. Brandbook 9.1 and 9.2, laid out like Imperator EQ.
+/// Header, corner grid with the disable switch under it, footer. Brandbook 9.1 and 9.2.
 struct PopoverContentView: View {
     /// Wider than the brandbook's 340: two columns of pop-ups need 176 pt each
     /// for "Disable Screen Saver" at regular size, and 340 leaves 150.
@@ -28,7 +28,10 @@ struct PopoverContentView: View {
                 if let problem = store.problem { notice(for: problem) }
                 // Until the Dock has answered once there is nothing true to show,
                 // and placeholder corners would read as real ones.
-                if store.hasReadDock { cornerGrid }
+                if store.hasReadDock {
+                    cornerGrid
+                    disableRow
+                }
             }
             .padding(Self.padding)
             Divider()
@@ -51,16 +54,24 @@ struct PopoverContentView: View {
                 .font(.headline)
 
             Spacer()
-
-            if store.hasReadDock {
-                Toggle("", isOn: Binding(get: { store.isEnabled }, set: { store.setEnabled($0) }))
-                    .brandSwitch(anchor: .trailing)
-                    .disabled(!store.canEdit)
-                    .accessibilityLabel("Hot Corners")
-            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+    }
+
+    /// The switch acts on all four corners, so it sits under them with the
+    /// action in its name instead of in the header. On means every corner is
+    /// off; the store's own flag runs the other way.
+    private var disableRow: some View {
+        HStack(spacing: 6) {
+            Text("Disable HotCorners")
+                .font(.callout)
+            Toggle("", isOn: Binding(get: { !store.isEnabled }, set: { store.setEnabled(!$0) }))
+                .brandSwitch()
+                .disabled(!store.canEdit)
+                .accessibilityLabel("Disable HotCorners")
+            Spacer(minLength: 0)
+        }
     }
 
     // The grid mirrors the screen: a pop-up sits where its corner is.
@@ -75,8 +86,8 @@ struct PopoverContentView: View {
                 popUp(.bottomRight)
             }
         }
-        // With the switch off, the grid fades as one. It all stays usable, so
-        // corners can be set up before they are turned on.
+        // With the corners disabled, the grid fades as one. It all stays usable,
+        // so corners can be set up before the switch goes off again.
         .opacity(store.isEnabled ? 1 : Self.offOpacity)
     }
 

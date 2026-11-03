@@ -54,7 +54,7 @@ closes the panel, as does Escape or a click in another app.
 |---------|--------------|
 | Corner pop-up | Sets that corner's action. The change applies at once, and System Settings shows the same value |
 | Hold ⌘, ⌥, ⌃ or ⇧ while choosing | Adds a modifier key, as in System Settings. The corner then fires only while those keys are held |
-| Header switch | Turns all four corners off, and back on |
+| Disable HotCorners switch, under the four pop-ups | Turns all four corners off, and back on |
 | Open at Login | Starts the app when you log in |
 | About | Version and copyright |
 | Quit | Quits the app |
@@ -64,7 +64,7 @@ Windows, Desktop, Notification Center, Apps, Quick Note, Start Screen Saver, Dis
 Put Display to Sleep, Lock Screen, and "-" for no action.
 
 Switching off sets every corner to "-" and remembers what each one did, modifier keys included.
-Switching on puts them back. While the switch is off the pop-ups still work, dimmed: what you
+Switching on puts them back. While the switch is on the pop-ups still work, dimmed: what you
 choose then is what comes back when you switch on, and the Dock is not touched until you do. If
 you turn a corner on in System Settings while the app is off, System Settings wins and the switch
 turns back on.

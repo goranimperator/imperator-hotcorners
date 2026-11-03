@@ -9,6 +9,7 @@ swift test
 make build
 .build/debug/ImperatorHotCorners --dock-check
 .build/debug/ImperatorHotCorners --icon-check
+.build/debug/ImperatorHotCorners --panel-check
 .build/debug/ImperatorHotCorners --render-preview build/preview
 node ~/.claude/skills/unlazy/scripts/gate-check.mjs --status GATES.md
 ```
@@ -30,6 +31,9 @@ node ~/.claude/skills/unlazy/scripts/gate-check.mjs --status GATES.md
 ## Decisions recorded
 
 - Pop-up title (SPEC U4): the menu always holds Settings' items and modifier alternates; the closed button shows the store's value through `NSPopUpButtonCell.menuItem` with `usesItemFromMenu = false`.
+- The disable switch is not in the header (2026-11-03). It sits on its own row under the four pop-ups, reads "Disable HotCorners", and is on when every corner is off, which is the inverse of `store.isEnabled` and of EQ's header switch. The header holds no controls.
+- A click on the status item decides on the state at press time, not when the button action arrives (2026-11-03). The press itself can close the panel through the outside click monitors or a resign, and an action that read `isShown` then reopened what the click had just closed. `MenuBarPanel.statusClickShouldClose()` is the only thing `togglePanel` asks; `--panel-check` (gate G13) covers the race. Three parts hold it: a click in the menu bar strip is never an outside click (the strip, not the item's own rect: AppKit can rebuild a status item's button, and a rect read from a stale one never matches); `close()` records a menu bar press while `NSApp.currentEvent` is still that press; and a close within 0.4 s of an action that arrives from the menu bar counts as that click's close, for a close that carried no event of its own. A separate press monitor cannot do this: AppKit does not guarantee the order it calls local monitors in, which measured 50/50 flaky.
+- `isFloatingPanel` sets the window level, so it is set before `level = .popUpMenu` in `MenuBarPanel` (2026-11-03). In the other order the level silently becomes `.floating` (3) and the panel sits under the Dock and the menu bar. `--panel-check` (gate G13) fails on it.
 - A switch saves its snapshot marked in transition before the first Dock write. A record still marked after a failure is how `refresh()` tells this app's partial writes from changes made in System Settings.
 
 ## Rules
