@@ -1,8 +1,8 @@
 # Gates: Imperator HotCorners v1
 
-OWNS: Package.swift, Makefile, .gitignore, LICENSE, README.md, CLAUDE.md, SPEC.md, PLAN.md, GATES.md, ANTISLOP-GATE.md, Resources/**, Sources/**, Tests/**, scripts/**
+OWNS: Package.swift, Makefile, .gitignore, LICENSE, README.md, CLAUDE.md, SPEC.md, GATES.md, Resources/**, Sources/**, Tests/**, scripts/**
 
-Scope: a signed, universal menu bar app that reads the four hot corners from the Dock, writes them the way System Settings does, and turns them all off and back on from a Disable HotCorners switch under the four pop-ups, built to the Imperator brandbook (SPEC.md, PLAN.md).
+Scope: a signed, universal menu bar app that reads the four hot corners from the Dock, writes them the way System Settings does, and turns them all off and back on from a Disable HotCorners switch under the four pop-ups, built to the Imperator brandbook (SPEC.md).
 
 Runnable gates run from the repo root with /bin/sh. Tools needed: Xcode 27 command line tools (swift, otool, lipo, codesign, plutil, strings), node, and the Imperator Dev signing identity in the login keychain. G5 to G8 run the built binary; G5 reads the live Dock and writes nothing.
 
@@ -49,7 +49,7 @@ Runnable gates run from the repo root with /bin/sh. Tools needed: Xcode 27 comma
 - [x] G9: no em dash or en dash in shipped text (scanner proves itself on a fixture first)
   CHECK: node scripts/check-dashes.mjs
   EXPECT: DASHES_OK
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=<repo root>; path=58838ac404b6/37 entries; output=scanned 36 files | DASHES_OK
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=<repo root>; path=58838ac404b6/37 entries; output=scanned 35 files | DASHES_OK
 
 - [x] G10: brand rules hold in source: no bare accentColor, no NSPopover, no pointing hand on a switch, accent override set
   CHECK: node scripts/check-brand.mjs
@@ -61,17 +61,17 @@ Runnable gates run from the repo root with /bin/sh. Tools needed: Xcode 27 comma
   EXPECT: G11_NO_DEBUG_OK
   EVIDENCE: exit=0; shell=/bin/sh; cwd=<repo root>; path=58838ac404b6/37 entries; output=G11_NO_DEBUG_OK
 
-- [ ] G13: the panel opens at the pop-up menu level, a click on the switch lands and turns the corners off and on, a click inside keeps it open, Escape closes it, it reopens, it grows for a notice, and nothing closes it on the click itself: neither a click in the menu bar nor the app losing activation takes it down under the pointer, so the second click after a pause still closes it
-  CHECK: "build/Imperator Hot Corners.app/Contents/MacOS/ImperatorHotCorners" --panel-check
+- [x] G13: the panel opens at the pop-up menu level, a click on the switch lands and turns the corners off and on, a click inside keeps it open, Escape closes it, it reopens, it grows for a notice, and nothing closes it on the click itself: neither a click in the menu bar nor the app losing activation takes it down under the pointer, so the second click after a pause still closes it
+  CHECK: "build/Imperator HotCorners.app/Contents/MacOS/ImperatorHotCorners" --panel-check
   EXPECT: PANEL_CHECK_OK
-  EVIDENCE: pending
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=<repo root>; path=58838ac404b6/37 entries; output=PANEL_CHECK_OK
 
 - [x] G12: the bundle carries the real app icon
   CHECK: test -f Resources/AppIcon.png && test -f "build/Imperator HotCorners.app/Contents/Resources/AppIcon.icns" && echo G12_ICON_OK
   EXPECT: G12_ICON_OK
   EVIDENCE: exit=0; shell=/bin/sh; cwd=<repo root>; path=58838ac404b6/37 entries; output=G12_ICON_OK
 
-- [x] M1: Goran ran `swift scripts/calibrate-dock.swift --run`; the output shows ORDER, CORNER_CODES, STATE_RESTORED and CALIBRATION_OK, and those codes are pinned in CoreDockBackend and its test (PLAN.md Task 3)
+- [x] M1: Goran ran `swift scripts/calibrate-dock.swift --run`; the output shows ORDER, CORNER_CODES, STATE_RESTORED and CALIBRATION_OK, and those codes are pinned in CoreDockBackend and its test (build plan Task 3)
   EVIDENCE: Goran's run 2026-10-31: ORDER action,corner,modifiers; CORNER_CODES tl=0 tr=1 bl=2 br=3; STATE_RESTORED; CALIBRATION_OK. Codes pinned in CoreDockBackend.cornerCode and test cornerCodesMatchTheCalibration.
 
 - [ ] M2: Goran's live click-through on the installed app (make install). Each of the 11 actions set from the app shows the same title in System Settings > Desktop & Dock > Hot Corners. A change made in Settings shows in the app the next time it opens. Switch off: Settings shows "-" for all four; switch on: the old corners come back, modifiers included. While off, choosing an item changes nothing in Settings until the switch goes on. Every control clicked twice, the drawing follows both times. Escape, a click outside and the status item each close the panel
@@ -89,5 +89,5 @@ Runnable gates run from the repo root with /bin/sh. Tools needed: Xcode 27 comma
 - [x] M6: Goran supplied Resources/AppIcon.png (1024 by 1024, the sigil in his chosen colour) and make icon built Resources/AppIcon.icns
   EVIDENCE: 2026-10-31 Goran supplied hotCorners-iOS-Default-1024@1x.icns (all 10 sizes, ink 96 to 927 px, the same dock fit as WidgetClock). Copied as Resources/AppIcon.icns; make icon extracts its 256 px slice as Resources/AppIcon.png for the README.
 
-- [ ] M7: the antislop Delivery Gate report in ANTISLOP-GATE.md is PASS on every line, with evidence
+- [ ] M7: the antislop Delivery Gate report in .notes/ANTISLOP-GATE.md is PASS on every line, with evidence
   EVIDENCE: pending

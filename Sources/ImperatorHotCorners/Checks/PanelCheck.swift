@@ -160,13 +160,21 @@ enum PanelCheck {
         expect(panel.isVisible,
                "a click in the menu bar closed the panel before its action, so it cannot toggle")
         expect(panel.isShown, "the open panel does not report itself as shown, so its action would reopen it")
+        // The lowest row of the strip too: on a display with a notch the bar is
+        // taller than NSStatusBar.thickness.
+        if let screen = NSScreen.main {
+            let low = NSPoint(x: screen.frame.midX, y: screen.frame.maxY - MenuBarPanel.menuBarHeight(of: screen) + 1)
+            expect(MenuBarPanel.isMenuBarPoint(low), "the bottom row of the menu bar counts as outside the strip")
+            press(at: low)
+            expect(panel.isVisible, "a click on the bottom row of the menu bar closed the panel")
+        }
 
         // The action's close leaves nothing behind: the click after it opens.
         panel.close()
         expect(!panel.isShown,
                "a closed panel still reports itself as shown, so the next click closes instead of opens")
 
-        // Activation is not the panel's life. macOS hands an accessory app's
+        // A guard against bringing the resign observer back. Activation is not the panel's life. macOS hands an accessory app's
         // activation back a few seconds after the panel opens, and a panel that
         // closed on that resign came down under a still pointer: the click after
         // the pause reopened it instead of closing it.

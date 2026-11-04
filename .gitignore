@@ -10,3 +10,5 @@ dist/
 .unlazy-hook-state.json
 graphify-out/
 .freebuff/
+.cloud-attachments/
+.notes/

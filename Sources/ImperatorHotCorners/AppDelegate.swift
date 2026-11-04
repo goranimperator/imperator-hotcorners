@@ -7,6 +7,7 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var panel: MenuBarPanel!
+    private var panelVisibilityObserver: NSObjectProtocol?
     private var store: HotCornerStore!
     private var cancellables = Set<AnyCancellable>()
 
@@ -52,6 +53,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 quitAction: { NSApplication.shared.terminate(nil) }),
             width: PopoverContentView.width)
         panel.onClose = { [weak self] in self?.statusItem.button?.highlight(false) }
+        // The panel also hides with the app (hidesOnDeactivate), which is not a
+        // close, so the pressed look follows the panel's visibility as well.
+        panelVisibilityObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didChangeOcclusionStateNotification, object: panel, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, !self.panel.isVisible else { return }
+                self.statusItem.button?.highlight(false)
+            }
+        }
     }
 
     @objc private func togglePanel() {

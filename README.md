@@ -63,18 +63,18 @@ The actions and their order are the ones System Settings offers: Mission Control
 Windows, Desktop, Notification Center, Apps, Quick Note, Start Screen Saver, Disable Screen Saver,
 Put Display to Sleep, Lock Screen, and "-" for no action.
 
-Switching off sets every corner to "-" and remembers what each one did, modifier keys included.
-Switching on puts them back. While the switch is on the pop-ups still work, dimmed: what you
-choose then is what comes back when you switch on, and the Dock is not touched until you do. If
-you turn a corner on in System Settings while the app is off, System Settings wins and the switch
-turns back on.
+Turning **Disable HotCorners** on sets every corner to "-" and remembers what each one did,
+modifier keys included. Turning it off puts them back. While it is on, the pop-ups still work,
+dimmed: what you choose then is what comes back when you turn it off, and the Dock is not touched
+until you do. If you turn a corner on in System Settings while the corners are disabled, System
+Settings wins and the switch goes back off.
 
 If the Dock does not answer, or a change does not stick, a short notice in the panel says so,
 with a button to try again or to open Desktop & Dock settings. Nothing is changed while a notice
 about the Dock is showing. A switch that fails halfway is undone; if even that fails, the app keeps
-the remembered corners, so switching on again puts every one of them back.
+the remembered corners, so turning the switch off again puts every one of them back.
 
-The app keeps one thing of its own: the remembered corners while the switch is off, stored under
+The app keeps one thing of its own: the remembered corners while the corners are disabled, stored under
 the `disabledSnapshot` key in the `com.goranimperator.ImperatorHotCorners` defaults domain.
 
 ## How it works
@@ -146,11 +146,15 @@ in `_OK` and exits 0, or prints `FAIL` lines and exits 1:
 ```
 
 ```bash
+.build/debug/ImperatorHotCorners --panel-check
+```
+
+```bash
 .build/debug/ImperatorHotCorners --render-preview build/preview
 ```
 
 `--dock-check` reads the Dock and compares it with the `wvous-*` preferences, without writing
-anything. `--icon-check` measures the menu bar glyph in pixels. `--render-preview` draws the panel
+anything. `--icon-check` measures the menu bar glyph in pixels. `--panel-check` opens the real panel on a fake Dock and drives it: its window level, the switch, Escape, a click in the menu bar, and the refit for a notice. `--render-preview` draws the panel
 in every state, the glyph in both corner marks, and the menu order into `build/preview`. A debug
 build started with `IMPERATOR_HOTCORNERS_FAKE=1` uses a fake Dock, so every control can be clicked
 without touching your real corners. The fake is compiled out of release builds.
@@ -191,18 +195,18 @@ regenerate `Resources/AppIcon.png`, the 256 px image this README shows.
 | `Sources/ImperatorHotCorners/main.swift` | Entry point: runs a self-check and exits, or starts the app as `.accessory` |
 | `Sources/ImperatorHotCorners/AppDelegate.swift` | Status item, panel, store wiring, forced dark mode and red accent |
 | `Sources/ImperatorHotCorners/MenuBarPanel.swift` | The menu bar panel itself: corner, material, dismissal |
-| `Sources/ImperatorHotCorners/PopoverContentView.swift` | Header with the switch, notices, the corner grid, footer |
+| `Sources/ImperatorHotCorners/PopoverContentView.swift` | Header, notices, the corner grid with the Disable HotCorners switch under it, footer |
 | `Sources/ImperatorHotCorners/CornerPopUp.swift` | One corner's native `NSPopUpButton`, built from `CornerMenu` |
 | `Sources/ImperatorHotCorners/StatusItemIcon.swift` | The glyph: a screen frame with a mark in each corner |
 | `Sources/ImperatorHotCorners/Theme.swift` | Brand colour, switch style, `HoverButton`, `LaunchAtLoginToggle` |
 | `Sources/ImperatorHotCorners/AboutPanel.swift` | Brand book §10 About panel, `NSPanel` 300x260pt |
 | `Sources/ImperatorHotCorners/DebugBackend.swift` | The fake Dock for debug builds |
-| `Sources/ImperatorHotCorners/Checks/` | The self-checks: `DockCheck.swift` (`--dock-check`), `IconCheck.swift` (`--icon-check`), `AboutCheck.swift` (`--about-check`), `PreviewRender.swift` (`--render-preview`) |
+| `Sources/ImperatorHotCorners/Checks/` | The self-checks: `DockCheck.swift` (`--dock-check`), `IconCheck.swift` (`--icon-check`), `PanelCheck.swift` (`--panel-check`), `AboutCheck.swift` (`--about-check`), `PreviewRender.swift` (`--render-preview`) |
 | `Tests/HotCornersCoreTests/` | Unit tests for the model, the Dock bridge, the store and the menu |
 | `scripts/calibrate-dock.swift` | Measures the Dock setter's arguments on a real Dock, undoing every change |
 | `scripts/check-dashes.mjs`, `scripts/check-brand.mjs` | Text and brand gates |
 | `Resources/` | `Info.plist` and the app icon |
-| `SPEC.md`, `PLAN.md`, `GATES.md` | Design, build plan and acceptance gates |
+| `SPEC.md`, `GATES.md` | Design with the verified Dock facts, and the acceptance gates |
 
 The menu bar panel is drawn by `MenuBarPanel`, an `NSPanel`, rather than by `NSPopover`. macOS 27
 draws its own menu bar panels as plain rounded rectangles with no arrow and no open or close

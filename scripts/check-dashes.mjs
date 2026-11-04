@@ -1,18 +1,17 @@
-import { readFileSync, readdirSync, statSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join, extname } from "node:path";
 import { tmpdir } from "node:os";
 
-// Every text file in the repo, not a list that can fall behind.
+// Every text file git would ship: tracked plus untracked-but-not-ignored, so a
+// local tool folder that .gitignore excludes never fails the gate.
 const dash = new RegExp(`[${String.fromCharCode(0x2013)}${String.fromCharCode(0x2014)}]`);
-const skipDirs = new Set([".git", ".build", ".swiftpm", "build", "dist", "graphify-out", ".unlazy", ".claude"]);
 const binary = new Set([".png", ".icns", ".zip", ".jpg", ".webp", ".car"]);
 
-function files(path) {
-  const info = statSync(path);
-  if (!info.isDirectory()) return binary.has(extname(path)) ? [] : [path];
-  return readdirSync(path)
-    .filter((name) => !skipDirs.has(name) && name !== ".DS_Store")
-    .flatMap((name) => files(join(path, name)));
+function files() {
+  return execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], { encoding: "utf8" })
+    .split("\n")
+    .filter((path) => path && existsSync(path) && !binary.has(extname(path)));
 }
 
 function scan(path) {
@@ -31,7 +30,7 @@ if (!controlHit) {
   process.exit(1);
 }
 
-const all = files(".");
+const all = files();
 const hits = all.flatMap(scan);
 if (hits.length) {
   console.log(hits.map((h) => `FAIL dash at ${h}`).join("\n"));

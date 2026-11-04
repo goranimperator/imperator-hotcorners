@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Imperator HotCorners: a menu bar app that shows the four macOS hot corners as pop-up buttons and has a header switch that turns all of them off and on. Design direction is `../imperator-apps-brandbook/BRANDBOOK.md`. Spec, plan and gates: `SPEC.md`, `PLAN.md`, `GATES.md`.
+Imperator HotCorners: a menu bar app that shows the four macOS hot corners as pop-up buttons and a "Disable HotCorners" switch under them that turns all of them off and back on. Design direction is `../imperator-apps-brandbook/BRANDBOOK.md`. Spec and gates: `SPEC.md`, `GATES.md`. The original build plan and the antislop report are kept locally in `.notes/` (gitignored).
 
 ## Commands
 

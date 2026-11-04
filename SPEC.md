@@ -1,7 +1,7 @@
 # Imperator HotCorners: design
 
 Date: 2026-10-27. Measured on macOS 27.2 (26B123), Xcode 27.1, Swift 6.4, Apple silicon.
-Implementation plan: `PLAN.md`.
+Implementation plan: `.notes/PLAN.md` (local, not in the repo).
 Acceptance gates: `GATES.md`.
 
 ## Intent

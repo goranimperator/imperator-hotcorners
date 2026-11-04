@@ -176,9 +176,18 @@ final class MenuBarPanel: NSPanel {
     /// Whether a screen point is in a screen's menu bar strip. The status item
     /// lives there, so a click there is the toggle or another item's, never a
     /// click outside this panel.
-    private static func isMenuBarPoint(_ point: NSPoint) -> Bool {
+    static func isMenuBarPoint(_ point: NSPoint) -> Bool {
         guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) else { return false }
-        return point.y > screen.frame.maxY - NSStatusBar.system.thickness
+        return point.y > screen.frame.maxY - menuBarHeight(of: screen)
+    }
+
+    /// The menu bar's real height on a screen. `NSStatusBar.thickness` is the
+    /// short bar; on a display with a notch the bar is as tall as the notch, and
+    /// a click on the lower part of an item would otherwise count as outside.
+    static func menuBarHeight(of screen: NSScreen) -> CGFloat {
+        max(NSStatusBar.system.thickness,
+            screen.frame.maxY - screen.visibleFrame.maxY,
+            screen.safeAreaInsets.top)
     }
 
     private static func screenPoint(of event: NSEvent) -> NSPoint {

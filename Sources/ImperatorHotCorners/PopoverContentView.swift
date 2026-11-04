@@ -65,7 +65,8 @@ struct PopoverContentView: View {
     private var disableRow: some View {
         HStack(spacing: 6) {
             Text("Disable HotCorners")
-                .font(.callout)
+                // Brandbook 3.2: labels are 13 pt regular.
+                .font(.system(size: 13))
             Toggle("", isOn: Binding(get: { !store.isEnabled }, set: { store.setEnabled(!$0) }))
                 .brandSwitch()
                 .disabled(!store.canEdit)
