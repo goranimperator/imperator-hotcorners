@@ -5,8 +5,8 @@
 <h1 align="center">Imperator HotCorners</h1>
 
 <p align="center">
-  The four macOS hot corners in the menu bar. Four pop-up buttons, one per corner, and one
-  switch that turns every corner off and brings them back.
+  Set the four macOS hot corners from the menu bar, or turn them all off with one switch.
+  Quick and easy.
 </p>
 
 ## Requirements
