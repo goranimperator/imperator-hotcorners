@@ -61,7 +61,7 @@ Runnable gates run from the repo root with /bin/sh. Tools needed: Xcode 27 comma
   EXPECT: G11_NO_DEBUG_OK
   EVIDENCE: exit=0; shell=/bin/sh; cwd=<repo root>; path=58838ac404b6/37 entries; output=G11_NO_DEBUG_OK
 
-- [ ] G13: the panel opens at the pop-up menu level, a click on the switch lands and turns the corners off and on, a click inside keeps it open, Escape closes it, it reopens, it grows for a notice, and a press on the status item that closed the panel does not reopen it
+- [ ] G13: the panel opens at the pop-up menu level, a click on the switch lands and turns the corners off and on, a click inside keeps it open, Escape closes it, it reopens, it grows for a notice, and nothing closes it on the click itself: neither a click in the menu bar nor the app losing activation takes it down under the pointer, so the second click after a pause still closes it
   CHECK: "build/Imperator Hot Corners.app/Contents/MacOS/ImperatorHotCorners" --panel-check
   EXPECT: PANEL_CHECK_OK
   EVIDENCE: pending

@@ -15,23 +15,11 @@ final class MenuBarPanel: NSPanel {
     private var clickMonitor: Any?
     private var appClickMonitor: Any?
     private var keyMonitor: Any?
-    /// The menu bar press monitor, registered for the panel's whole life.
-    private var statusPressMonitor: Any?
-    /// Whether the panel was up when the current click on the status item
-    /// started, so the button's action knows it is a close and not an open.
-    private var panelWasOpenAtStatusPress = false
     private weak var anchor: NSStatusBarButton?
-    private var resignObserver: NSObjectProtocol?
 
     /// Called when the panel closes itself, so the owner can keep the status
     /// item's pressed state honest.
     var onClose: (() -> Void)?
-
-    /// The height the panel opens at, when the app computes it itself.
-    var contentHeight: (() -> CGFloat)?
-
-    /// Asked before an outside click closes the panel.
-    var shouldCloseOnOutsideClick: () -> Bool = { true }
 
     init<Content: View>(content: Content, width: CGFloat) {
         host = NSHostingView(rootView: AnyView(content))
@@ -44,22 +32,21 @@ final class MenuBarPanel: NSPanel {
         // the Dock and the menu bar, and the level set here would be a no-op.
         isFloatingPanel = true
         level = .popUpMenu
-        // Not hidesOnDeactivate: that hides the panel without close(), leaving the
-        // Escape monitor installed. The panel closes itself on deactivation instead.
-        hidesOnDeactivate = false
-        resignObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didResignActiveNotification, object: nil, queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self, self.isVisible else { return }
-                self.close()
-            }
-        }
+        // Brandbook 6.1: the panel hides with the app, so it never sits over
+        // another one. Not a close on didResignActive instead: macOS hands an
+        // accessory app's activation back a few seconds after the panel opens
+        // (measured here), so a close on that resign took the panel down under a
+        // still pointer, and the next click reopened it instead of closing it.
+        hidesOnDeactivate = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         backgroundColor = .clear
         isOpaque = false
         hasShadow = true
         isMovable = false
+        // Brandbook 6.1: no animation. macOS puts its own menu bar panels up and
+        // takes them down instantly, and a fade is what marks an app as not part
+        // of the system.
+        animationBehavior = .none
 
         container.material = .popover
         container.blendingMode = .behindWindow
@@ -78,20 +65,6 @@ final class MenuBarPanel: NSPanel {
             host.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
         contentView = container
-
-        // Registered once, for the panel's whole life, and never beside the
-        // monitors below: those are removed by `close()`, and a press that takes
-        // the panel down has to be seen before it does. Set at every menu bar
-        // press, so a record left by an earlier click cannot outlive the click
-        // that follows it: a record that did made the panel take two clicks to
-        // open.
-        statusPressMonitor = NSEvent.addLocalMonitorForEvents(
-            matching: [.leftMouseDown, .rightMouseDown]
-        ) { [weak self] event in
-            guard let self, Self.isMenuBarPress(event) else { return event }
-            self.panelWasOpenAtStatusPress = self.isVisible
-            return event
-        }
     }
 
     var isShown: Bool { isVisible }
@@ -100,9 +73,8 @@ final class MenuBarPanel: NSPanel {
         guard let buttonWindow = button.window else { return }
         anchor = button
 
-        panelWasOpenAtStatusPress = false
         host.layoutSubtreeIfNeeded()
-        let height = contentHeight?() ?? host.fittingSize.height
+        let height = host.fittingSize.height
         setContentSize(NSSize(width: frame.width, height: height))
 
         let buttonFrame = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
@@ -125,7 +97,7 @@ final class MenuBarPanel: NSPanel {
         guard isVisible else { return }
         let top = frame.maxY
         host.layoutSubtreeIfNeeded()
-        let height = contentHeight?() ?? host.fittingSize.height
+        let height = host.fittingSize.height
         setContentSize(NSSize(width: frame.width, height: height))
         setFrameTopLeftPoint(NSPoint(x: frame.minX, y: top))
     }
@@ -133,30 +105,9 @@ final class MenuBarPanel: NSPanel {
     /// An override, so every `close()` in the app lands here and the monitors
     /// go with the panel.
     override func close() {
-        // A click on the status item can close the panel before the button's
-        // action arrives. That is recorded at the press itself, by the monitor in
-        // init. Only a press is recorded here, never the mouse up the action
-        // arrives on: re-arming there left the record set after the click that
-        // closed the panel, so the next click read as a close and did nothing.
-        // Decided from the menu bar strip rather than the item's own rect: a
-        // status item's button can be rebuilt by AppKit, and a rect read from a
-        // stale one would never match.
-        if isMenuBarPress(NSApp.currentEvent) { panelWasOpenAtStatusPress = true }
         stopMonitoring()
         super.close()
         onClose?()
-    }
-
-    /// Whether a click on the status item closes the panel.
-    ///
-    /// True when the panel is up, or was up when the press landed and has
-    /// closed itself since: a press can close the panel before the button's
-    /// action arrives, through the outside click monitors or a resign, and an
-    /// action that read `isShown` alone would reopen what the press just closed.
-    func statusClickShouldClose() -> Bool {
-        let shouldClose = isVisible || panelWasOpenAtStatusPress
-        panelWasOpenAtStatusPress = false
-        return shouldClose
     }
 
     private func startMonitoring() {
@@ -165,15 +116,16 @@ final class MenuBarPanel: NSPanel {
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] event in
             guard let self else { return }
-            guard self.shouldCloseOnOutsideClick() else { return }
             // The event knows where it landed; a global event from another app
             // has no window, and then the pointer is the same answer.
             let pointer = Self.screenPoint(of: event)
-            // A click in the menu bar is not a click outside: on the status item
-            // it is the toggle, and closing here races the button's action, which
-            // then reopens what it just closed. Anywhere else in the bar the app
-            // resigns or the other item takes over, and that closes the panel.
-            if Self.isMenuBarPoint(pointer) { return }
+            // The item the panel was shown from is the toggle. Closing on its
+            // click here races the button's action, which then reopens what it
+            // just closed.
+            if self.isOnAnchorItem(pointer) { return }
+            // With no window for that item its click cannot be told from another
+            // item's, and closing on it would race the toggle the same way.
+            if self.anchor?.window == nil, Self.isMenuBarPoint(pointer) { return }
             // Decide outside from where the pointer is, not from which monitor
             // saw the event: the first click into an inactive accessory app
             // reaches a global monitor too.
@@ -213,6 +165,14 @@ final class MenuBarPanel: NSPanel {
         keyMonitor = nil
     }
 
+    /// Whether a screen point lands on the status item the panel was shown from.
+    /// Read from the item's window at click time, so a button AppKit rebuilt
+    /// still matches.
+    private func isOnAnchorItem(_ point: NSPoint) -> Bool {
+        guard let window = anchor?.window else { return false }
+        return window.frame.contains(point)
+    }
+
     /// Whether a screen point is in a screen's menu bar strip. The status item
     /// lives there, so a click there is the toggle or another item's, never a
     /// click outside this panel.
@@ -225,22 +185,11 @@ final class MenuBarPanel: NSPanel {
         event.window?.convertPoint(toScreen: event.locationInWindow) ?? NSEvent.mouseLocation
     }
 
-    /// Down only: a press is the click's own event, the up is the button's action
-    /// arriving, and reading that as a press is what re-armed the record.
-    private static func isMenuBarPress(_ event: NSEvent?) -> Bool {
-        guard let event, event.type == .leftMouseDown || event.type == .rightMouseDown else { return false }
-        return isMenuBarPoint(screenPoint(of: event))
-    }
-
-    private func isMenuBarPress(_ event: NSEvent?) -> Bool { Self.isMenuBarPress(event) }
-
     // A borderless panel refuses key status by default, which leaves the
     // SwiftUI content unable to take Escape or drive its controls.
     override var canBecomeKey: Bool { true }
 
     deinit {
         stopMonitoring()
-        if let statusPressMonitor { NSEvent.removeMonitor(statusPressMonitor) }
-        if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
     }
 }

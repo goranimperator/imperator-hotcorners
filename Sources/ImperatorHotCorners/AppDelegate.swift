@@ -55,9 +55,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func togglePanel() {
-        // Not `panel.isShown`: the press itself can close the panel, and the
-        // click would then reopen it instead of closing it.
-        if panel.statusClickShouldClose() { closePanel() } else { showPanel() }
+        // Brandbook 18.1: the panel is the whole state. Nothing closes it on the
+        // click itself, because a click in the menu bar is never read as an
+        // outside click, so `isShown` is the honest answer here.
+        if panel.isShown { closePanel() } else { showPanel() }
     }
 
     private func showPanel() {

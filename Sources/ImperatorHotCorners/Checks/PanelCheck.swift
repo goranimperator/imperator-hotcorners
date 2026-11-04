@@ -25,9 +25,10 @@ enum PanelCheck {
         }
     }
 
-    /// A press in the menu bar, where the status item lives, the way a real
-    /// click arrives: through the app, so the panel's own local monitors see it.
-    /// Where the status item sits: in the menu bar strip.
+    /// A press in the menu bar strip, where the status item lives. Not read from
+    /// the item's own rect: a status item in a check run is never laid out in the
+    /// strip (its rect sits at the window's origin), so the rule that protects the
+    /// toggle is measured where it applies, in the strip itself.
     private static var menuBarPoint: NSPoint? {
         guard let screen = NSScreen.main else { return nil }
         return NSPoint(x: screen.frame.midX, y: screen.frame.maxY - 6)
@@ -62,9 +63,8 @@ enum PanelCheck {
             clickCount: 1, pressure: 1)
     }
 
-    /// Taken through the queue, not sent: `NSApp.currentEvent` is set when the
-    /// event comes off the queue, and the panel reads it to see that a close is
-    /// a click on the status item.
+    /// Taken through the queue, not sent: the app's own monitors only run for
+    /// events that come off the queue.
     private static func post(_ event: NSEvent) {
         NSApp.postEvent(event, atStart: false)
         while let next = NSApp.nextEvent(matching: .any,
@@ -79,18 +79,6 @@ enum PanelCheck {
             guard let event = mouseEvent(type, at: screenPoint) else { continue }
             post(event)
         }
-    }
-
-    /// Closes the panel the way the status item's action does: while a menu bar
-    /// mouse up is the current event.
-    private static func closeOnMenuBarUp(_ panel: MenuBarPanel) {
-        guard let point = menuBarPoint, let up = mouseEvent(.leftMouseUp, at: point) else { return }
-        let closer = NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { [weak panel] _ in
-            panel?.close()
-            return nil
-        }
-        post(up)
-        if let closer { NSEvent.removeMonitor(closer) }
     }
 
     private static func escape(_ panel: NSPanel) {
@@ -128,6 +116,8 @@ enum PanelCheck {
         expect(panel.level == .popUpMenu, "window level is \(panel.level.rawValue), not popUpMenu")
         expect(panel.canBecomeKey, "the panel cannot become key, so its controls cannot be driven")
         expect(panel.isReleasedWhenClosed == false, "the panel is released when closed, so it cannot reopen")
+        expect(panel.animationBehavior == .none,
+               "the panel animates when it opens; brandbook 6.1 puts its panels up instantly")
 
         panel.show(from: button)
         expect(panel.isVisible, "the panel did not open")
@@ -162,51 +152,37 @@ enum PanelCheck {
         expect(panel.frame.height > height, "the panel did not grow for the notice")
         panel.close()
 
-        // A click on the status item is the toggle: it must leave the panel to
-        // the button's action, not close it as an outside click. The menu bar is
-        // recognized by where the press landed, so it holds even when the item's
-        // own button is not the object the panel was shown from.
+        // Brandbook 18.1: the status item's action decides from `isShown`, which
+        // only holds while nothing closes the panel on the click itself. Its own
+        // click is the toggle, never an outside click.
         panel.show(from: button)
         pressMenuBar()
-        // Whether the press leaves the panel up or takes it down (a resign can),
-        // the click has to be read as the toggle. Reading it as an open is the
-        // bug this covers.
-        expect(panel.statusClickShouldClose(),
-               "a press on the status item is not read as the toggle, so the click reopens it")
+        expect(panel.isVisible,
+               "a click in the menu bar closed the panel before its action, so it cannot toggle")
+        expect(panel.isShown, "the open panel does not report itself as shown, so its action would reopen it")
 
-        // And if some closer does take the panel down during that press, the
-        // action has to read it as a close.
-        let closer = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak panel] _ in
-            panel?.close()
-            return nil
-        }
+        // The action's close leaves nothing behind: the click after it opens.
+        panel.close()
+        expect(!panel.isShown,
+               "a closed panel still reports itself as shown, so the next click closes instead of opens")
+
+        // Activation is not the panel's life. macOS hands an accessory app's
+        // activation back a few seconds after the panel opens, and a panel that
+        // closed on that resign came down under a still pointer: the click after
+        // the pause reopened it instead of closing it.
         panel.show(from: button)
-        pressMenuBar()
-        if let closer { NSEvent.removeMonitor(closer) }
-        expect(!panel.isVisible, "the closer did not take the panel down")
-        expect(panel.statusClickShouldClose(),
-               "a close during the status click is read as an open, so the click reopens it")
-        expect(!panel.statusClickShouldClose(), "the press state was not consumed")
+        NotificationCenter.default.post(name: NSApplication.didResignActiveNotification, object: NSApp)
+        expect(panel.isVisible,
+               "the panel closed itself when the app lost activation, so a slow second click reopens it")
+        // And the app losing focus is handled by the window, not by a stray
+        // panel left over another app.
+        expect(panel.hidesOnDeactivate, "the panel would stay on screen over another app")
+        panel.close()
 
-        // The click that closes the panel is a press and then the button's action
-        // on the mouse up. The action's own close must not leave the record set:
-        // a record left behind is the next click read as a close, which is the
-        // "click twice to open" bug.
-        panel.show(from: button)
-        pressMenuBar()
-        expect(panel.statusClickShouldClose(), "an open panel is not read as a close")
-        closeOnMenuBarUp(panel)
-        expect(!panel.isVisible, "the action's close did not take the panel down")
-        pressMenuBar()
-        expect(!panel.statusClickShouldClose(),
-               "the click after a close is read as another close, so it takes two clicks to open")
-
-        // A click below the menu bar is still a click outside, and closes, and is
-        // not the toggle.
+        // A click below the menu bar is still a click outside, and closes.
         panel.show(from: button)
         press(at: NSPoint(x: 200, y: 200))
         expect(!panel.isVisible, "a click outside the panel did not close it")
-        expect(!panel.statusClickShouldClose(), "an outside click reads as the toggle")
 
         if failures.isEmpty {
             print("PANEL_CHECK_OK")
