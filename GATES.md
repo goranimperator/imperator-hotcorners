@@ -49,7 +49,7 @@ Runnable gates run from the repo root with /bin/sh. Tools needed: Xcode 27 comma
 - [x] G9: no em dash or en dash in shipped text (scanner proves itself on a fixture first)
   CHECK: node scripts/check-dashes.mjs
   EXPECT: DASHES_OK
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=<repo root>; path=58838ac404b6/37 entries; output=scanned 35 files | DASHES_OK
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=<repo root>; path=58838ac404b6/37 entries; output=scanned 38 files | DASHES_OK
 
 - [x] G10: brand rules hold in source: no bare accentColor, no NSPopover, no pointing hand on a switch, accent override set
   CHECK: node scripts/check-brand.mjs

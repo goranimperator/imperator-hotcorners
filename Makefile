@@ -13,10 +13,9 @@ ICONSET      = build/AppIcon.iconset
 # designated requirement, and an ad-hoc cdhash changes on every build.
 CODESIGN_IDENTITY ?= Imperator Dev
 
-NOTES ?= Four hot corners as four pop-up buttons in the menu bar, read from and \
-written to the same place System Settings uses, so a change lands at once and \
-Settings shows the same value. One switch turns every corner off and brings them \
-back, modifier keys included.
+NOTES ?= The app now checks GitHub once a day for a newer release and shows it in the \
+panel, with one notification per version. Updating is still by hand. Turn the check off \
+with Check for updates in the footer.
 GATEKEEPER = Signed with a self-signed certificate and not notarized, so \
 Gatekeeper blocks the first launch: right-click the app and choose Open, or run \
 \`xattr -dr com.apple.quarantine \"/Applications/$(APP_NAME).app\"\`.

@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import Observation
 import HotCornersCore
 import SwiftUI
 
@@ -33,6 +34,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.panel.refit() }
             .store(in: &cancellables)
+
+        UpdateChecker.shared.start()
+        observeUpdateStatus()
     }
 
     private func setupStatusItem() {
@@ -91,5 +95,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func closePanel() {
         guard panel.isShown else { return }
         panel.close()
+    }
+
+    /// The update row can appear while the panel is open (Check Now, or the
+    /// launch check finishing late), so the panel refits to it.
+    private func observeUpdateStatus() {
+        withObservationTracking {
+            _ = UpdateChecker.shared.status
+        } onChange: { [weak self] in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    self?.panel.refit()
+                    self?.observeUpdateStatus()
+                }
+            }
+        }
     }
 }

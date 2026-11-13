@@ -36,6 +36,8 @@ node ~/.claude/skills/unlazy/scripts/gate-check.mjs --status GATES.md
 - `isFloatingPanel` sets the window level, so it is set before `level = .popUpMenu` in `MenuBarPanel` (2026-11-03). In the other order the level silently becomes `.floating` (3) and the panel sits under the Dock and the menu bar. `--panel-check` (gate G13) fails on it.
 - A switch saves its snapshot marked in transition before the first Dock write. A record still marked after a failure is how `refresh()` tells this app's partial writes from changes made in System Settings.
 
+- Update check (2026-11-13, from the shared Imperator update-checker spec, same as EQ): `UpdateChecker.swift` makes the app's only network request, one `GET` a day to `api.github.com/repos/goranimperator/imperator-hotcorners/releases/latest`, sending only `Imperator-HotCorners/<version>` as the User-Agent. It needs the repo to stay public. On by default with a footer switch and Check Now; the notification permission is asked only when there is an update; one notification per version; links open only for https://github.com. Do not remove it as unrequested network code, and do not widen what it sends.
+
 ## Rules
 
 - After every change, run `make install` yourself so the new build is live in /Applications. Do not ask Goran to deploy.

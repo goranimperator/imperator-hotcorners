@@ -31,17 +31,27 @@ first launch. Right-click the app and choose **Open**, or clear the quarantine f
 xattr -dr com.apple.quarantine "/Applications/Imperator HotCorners.app"
 ```
 
+An update you download later meets the same dialog, so run the command again after each one.
+
 There is no Dock icon. The app lives in the menu bar.
 
 ## Permissions
 
-None. The app requests no Accessibility, Input Monitoring, or Automation grants, and declares no
+The app requests no Accessibility, Input Monitoring, or Automation grants, and declares no
 `NSUsage` keys. It reads and changes hot corners through the same two Dock functions System
 Settings uses, and macOS asks for no permission for those.
 
-The one system integration is **Open at Login**, the toggle in the panel footer. It calls
-`SMAppService.mainApp.register()`, which adds the app to Login Items in System Settings. Turning
-the toggle off unregisters it.
+**Open at Login**, the toggle in the panel footer, calls `SMAppService.mainApp.register()`,
+which adds the app to Login Items in System Settings. Turning the toggle off unregisters it.
+
+**Notifications.** Asked the first time there is a newer version to tell you about, never at
+first launch. Allow it and you get one notification per new version; deny it and nothing
+breaks, the new version still shows as a row in the panel.
+
+**Network.** One request a day, the update check: a `GET` to
+`api.github.com/repos/goranimperator/imperator-hotcorners/releases/latest`. It sends nothing but
+the app's name and version as the User-Agent GitHub requires. No telemetry, no analytics, nothing
+about you or your corners. Turn it off with **Check for updates** in the panel's footer.
 
 ## Use
 
@@ -56,6 +66,8 @@ closes the panel, as does Escape or a click in another app.
 | Hold ⌘, ⌥, ⌃ or ⇧ while choosing | Adds a modifier key, as in System Settings. The corner then fires only while those keys are held |
 | Disable HotCorners switch, under the four pop-ups | Turns all four corners off, and back on |
 | Open at Login | Starts the app when you log in |
+| Check for updates | The daily check for a newer release, on by default |
+| Check Now | Checks for a newer release straight away, even with the switch off |
 | About | Version and copyright |
 | Quit | Quits the app |
 
@@ -73,6 +85,11 @@ If the Dock does not answer, or a change does not stick, a short notice in the p
 with a button to try again or to open Desktop & Dock settings. Nothing is changed while a notice
 about the Dock is showing. A switch that fails halfway is undone; if even that fails, the app keeps
 the remembered corners, so turning the switch off again puts every one of them back.
+
+**Updates.** Once a day the app asks GitHub whether a newer release is out. When there is one,
+a row above the footer says so and sends one notification; **Download** and the notification
+both open the release page. Installing is up to you, and a downloaded update meets Gatekeeper
+like the first install: choose **Done** and run the `xattr` command from Install again.
 
 The app keeps one thing of its own: the remembered corners while the corners are disabled, stored under
 the `disabledSnapshot` key in the `com.goranimperator.ImperatorHotCorners` defaults domain.
@@ -200,6 +217,8 @@ regenerate `Resources/AppIcon.png`, the 256 px image this README shows.
 | `Sources/ImperatorHotCorners/StatusItemIcon.swift` | The glyph: a screen frame with a mark in each corner |
 | `Sources/ImperatorHotCorners/Theme.swift` | Brand colour, switch style, `HoverButton`, `LaunchAtLoginToggle` |
 | `Sources/ImperatorHotCorners/AboutPanel.swift` | Brand book §10 About panel, `NSPanel` 300x260pt |
+| `Sources/ImperatorHotCorners/UpdateChecker.swift` | The daily check for a newer release on GitHub, and its one notification |
+| `Sources/HotCornersCore/ReleaseVersion.swift` | Numeric version comparison for the update check |
 | `Sources/ImperatorHotCorners/DebugBackend.swift` | The fake Dock for debug builds |
 | `Sources/ImperatorHotCorners/Checks/` | The self-checks: `DockCheck.swift` (`--dock-check`), `IconCheck.swift` (`--icon-check`), `PanelCheck.swift` (`--panel-check`), `AboutCheck.swift` (`--about-check`), `PreviewRender.swift` (`--render-preview`) |
 | `Tests/HotCornersCoreTests/` | Unit tests for the model, the Dock bridge, the store and the menu |

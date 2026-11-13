@@ -32,8 +32,8 @@ enum PreviewRender {
         return rep
     }
 
-    private static func render(_ store: HotCornerStore) -> NSBitmapImageRep? {
-        let view = PopoverContentView(store: store, dismissAction: {}, quitAction: {})
+    private static func render(_ store: HotCornerStore, update: UpdateChecker.Release? = nil) -> NSBitmapImageRep? {
+        let view = PopoverContentView(store: store, dismissAction: {}, quitAction: {}, previewUpdate: update)
         let host = NSHostingView(rootView: view)
         let size = host.fittingSize
         host.frame = NSRect(origin: .zero, size: size)
@@ -104,6 +104,16 @@ enum PreviewRender {
             } else {
                 failures.append("could not render \(name)")
             }
+        }
+
+        // The update row, drawn from a sample release rather than the network.
+        let sample = UpdateChecker.Release(version: "9.9.9",
+                                           page: URL(string: "https://github.com/goranimperator/imperator-hotcorners/releases")!)
+        if let rep = render(store(goran), update: sample) {
+            do { try save(rep, to: dir.appendingPathComponent("panel-update-available.png")) }
+            catch { failures.append("could not write panel-update-available") }
+        } else {
+            failures.append("could not render panel-update-available")
         }
 
         // The glyph, both marks, both sizes, at true 1x and 2x pixels, then blown
