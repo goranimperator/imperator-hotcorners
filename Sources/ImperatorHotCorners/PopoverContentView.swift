@@ -37,6 +37,9 @@ struct PopoverContentView: View {
             }
             .padding(Self.padding)
             AppUpdateRow(update: previewUpdate ?? UpdateChecker.shared.available)
+            UpdateCheckRow()
+                .padding(.horizontal, Self.padding)
+                .padding(.bottom, Self.padding)
             Divider()
             footerView
         }
@@ -165,7 +168,6 @@ struct PopoverContentView: View {
                         .font(.caption)
                 }
             }
-            UpdateCheckRow()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -206,8 +208,8 @@ struct AppUpdateRow: View {
     }
 }
 
-/// The footer's second row: the daily check's switch, its last result, and
-/// Check Now, which runs even with the switch off because it is asked for.
+/// The last row of the body, above the footer: the daily check's switch, its last
+/// result, and Check Now, which runs even with the switch off because it is asked for.
 /// The panel has no settings window, so this is where they live.
 struct UpdateCheckRow: View {
     @AppStorage(UpdateChecker.enabledKey) private var checkForUpdates = true

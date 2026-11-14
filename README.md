@@ -51,7 +51,7 @@ breaks, the new version still shows as a row in the panel.
 **Network.** One request a day, the update check: a `GET` to
 `api.github.com/repos/goranimperator/imperator-hotcorners/releases/latest`. It sends nothing but
 the app's name and version as the User-Agent GitHub requires. No telemetry, no analytics, nothing
-about you or your corners. Turn it off with **Check for updates** in the panel's footer.
+about you or your corners. Turn it off with **Check for updates** in the panel.
 
 ## Use
 
