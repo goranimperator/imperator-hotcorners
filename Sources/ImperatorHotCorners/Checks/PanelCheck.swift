@@ -93,6 +93,8 @@ enum PanelCheck {
     /// The switch's row: 12 pt under a 2 by 2 grid of 178 pt columns, which puts
     /// its centre about 137 pt below the panel's top edge.
     private static let switchCentre: CGFloat = 137
+    /// The switch sits at the right edge of the row, inside the 16 pt padding.
+    private static let switchX: CGFloat = 372
 
     static func run() -> Int32 {
         let app = NSApplication.shared
@@ -126,11 +128,11 @@ enum PanelCheck {
 
         // Watching the corners go off: the click has to land on the switch even
         // though the panel was not key when the pointer went down.
-        click(panel, at: NSPoint(x: 160, y: height - switchCentre))
+        click(panel, at: NSPoint(x: switchX, y: height - switchCentre))
         expect(!store.isEnabled, "a click on the switch did not disable the corners")
         expect(panel.isVisible, "a click on the switch closed the panel")
 
-        click(panel, at: NSPoint(x: 160, y: height - switchCentre))
+        click(panel, at: NSPoint(x: switchX, y: height - switchCentre))
         expect(store.isEnabled, "a second click on the switch did not bring the corners back")
         expect(backend.layout.hasActiveCorner, "the corners stayed off in the Dock")
 

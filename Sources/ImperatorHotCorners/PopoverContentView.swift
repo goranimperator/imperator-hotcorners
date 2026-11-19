@@ -67,16 +67,17 @@ struct PopoverContentView: View {
     /// action in its name instead of in the header. On means every corner is
     /// off; the store's own flag runs the other way.
     private var disableRow: some View {
-        HStack(spacing: 6) {
+        HStack {
             Text("Disable HotCorners")
                 // Brandbook 3.2: labels are 13 pt regular.
                 .font(.system(size: 13))
+            Spacer()
             Toggle("", isOn: Binding(get: { !store.isEnabled }, set: { store.setEnabled(!$0) }))
-                .brandSwitch()
+                .brandSwitch(anchor: .trailing)
                 .disabled(!store.canEdit)
                 .accessibilityLabel("Disable HotCorners")
-            Spacer(minLength: 0)
         }
+
     }
 
     // The grid mirrors the screen: a pop-up sits where its corner is.
